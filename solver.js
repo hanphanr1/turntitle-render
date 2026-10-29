@@ -207,6 +207,15 @@ function release() {
 
 // ---- browser pool ----
 
+// H1 debug: mo page bat ky tu browser pool (dung kiem tra proxy routing)
+async function debugOpenPage(url) {
+    const slot = await pickSlot();
+    const ctx = await slot.browser.newContext({ viewport: null });
+    const pg = await ctx.newPage();
+    const resp = await pg.goto(url, { timeout: 20000, waitUntil: 'domcontentloaded' }).catch(e => { throw e; });
+    return pg;
+}
+
 async function launchSlot(attach = true) {
     const base = { headless: false, args: LAUNCH_ARGS };
     let browser;

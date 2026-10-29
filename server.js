@@ -27,6 +27,20 @@ if (process.env.CAPTURE === '1') {
     try { out.captures = fs.readdirSync('/app/captures'); } catch (_) { out.captures = null; }
     res.json(out);
   });
+  // H1 debug: mo trang http://proxy.ca/ssl tu browser pool — chi load duoc NEU chrome qua proxy.
+  app.get('/capture-probe', async (_req, res) => {
+    try {
+      const sol = require('./solver');
+      const pg = await sol.debugOpenPage('http://proxy.ca/ssl');
+      let body = '';
+      try { body = await pg.content(); } catch (_) {}
+      let closed = false;
+      try { await pg.close(); closed = true; } catch (_) {}
+      res.json({ success: body.length > 0, len: body.length, has_cert: body.includes('BEGIN CERTIFICATE'), closed });
+    } catch (e) {
+      res.json({ success: false, err: String(e).slice(0, 200) });
+    }
+  });
   app.get('/capture-dump', (req, res) => {
     try {
       const fs = require('fs');
