@@ -22,6 +22,7 @@ if [ "$CAPTURE" = "1" ]; then
     --listen 127.0.0.1:8888 \
     --ca-dir /app/proxy-ca \
     --out /app/captures &
+  echo $! > /tmp/capture-proxy.pid
   # cho CA kip sinh roi cai vao he thong (Chrome moi tin MITM cert)
   i=0; while [ ! -f /app/proxy-ca/ca-cert.pem ] && [ "$i" -lt 50 ]; do sleep 0.2; i=$((i+1)); done
   if [ -f /app/proxy-ca/ca-cert.pem ]; then

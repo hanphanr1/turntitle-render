@@ -17,6 +17,25 @@ const app = express();
 if (process.env.CAPTURE === '1') {
   app.use('/captures', require('express').static('/app/captures'));
 }
+  // H1: bat capture-proxy xuat session ra dia (no chi ghi khi nhan SIGINT)
+  app.get('/capture-dump', (req, res) => {
+    try {
+      const fs = require('fs');
+      const pid = parseInt(fs.readFileSync('/tmp/capture-proxy.pid', 'utf8').trim(), 10);
+      process.kill(pid, 'SIGINT');
+    } catch (e) { return res.json({ success: false, err: String(e).slice(0, 120) }); }
+    const t0 = Date.now();
+    const iv = setInterval(() => {
+      let files = [];
+      try {
+        files = fs.readdirSync('/app/captures/sessions') || [];
+      } catch (_) {}
+      if (files.length || Date.now() - t0 > 20000) {
+        clearInterval(iv);
+        res.json({ success: files.length > 0, sessions: files });
+      }
+    }, 1000);
+  });
 app.disable('x-powered-by');
 app.use(express.json());
 
