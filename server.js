@@ -18,6 +18,15 @@ if (process.env.CAPTURE === '1') {
   app.use('/captures', require('express').static('/app/captures'));
 }
   // H1: bat capture-proxy xuat session ra dia (no chi ghi khi nhan SIGINT)
+  app.get('/capture-status', (_req, res) => {
+    const fs = require('fs');
+    const out = { capture: process.env.CAPTURE, proxy_args: process.env.PROXY_LAUNCH_ARGS || null };
+    try { out.pid = parseInt(fs.readFileSync('/tmp/capture-proxy.pid', 'utf8').trim(), 10); } catch (_) { out.pid = null; }
+    if (out.pid) { try { process.kill(out.pid, 0); out.proxy_alive = true; } catch (_) { out.proxy_alive = false; } }
+    try { out.ca_dir = fs.readdirSync('/app/proxy-ca'); } catch (_) { out.ca_dir = null; }
+    try { out.captures = fs.readdirSync('/app/captures'); } catch (_) { out.captures = null; }
+    res.json(out);
+  });
   app.get('/capture-dump', (req, res) => {
     try {
       const fs = require('fs');
