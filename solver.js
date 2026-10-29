@@ -783,4 +783,4 @@ async function debugSolve(siteKey, pageUrl, opts = {}) {
     }
 }
 
-module.exports = { init, solveTurnstile, solveIuam, mintCastle, health, shutdown, debugSolve, DEFAULT_TIMEOUT, isDraining: () => draining };
+module.exports = { init, solveTurnstile, solveIuam, mintCastle, health, shutdown, debugSolve, debugOpenPage, DEFAULT_TIMEOUT, isDraining: () => draining };
