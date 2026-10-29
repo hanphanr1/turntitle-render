@@ -52,6 +52,13 @@ let proxyPool = []; // [{ raw, fails }]
 let poolIdx = 0;
 
 function loadProxyPool() {
+    if (process.env.CAPTURE === '1') {
+        // H1 capture: TAT pool proxy — context-level proxy se override --proxy-server cua launch,
+        // lam traffic khong qua MITM capture-proxy.
+        proxyPool = [];
+        console.log('[PROXY-POOL] CAPTURE=1 -> pool off (traffic qua MITM 127.0.0.1:8888)');
+        return;
+    }
     const file = path.isAbsolute(PROXY_POOL_FILE) ? PROXY_POOL_FILE : path.join(__dirname, PROXY_POOL_FILE);
     try {
         const lines = [...new Set(fs.readFileSync(file, 'utf8').split(/\r?\n/).map(l => l.trim()))]
