@@ -1,0 +1,9 @@
+node_modules/
+*.log
+_tok*.txt
+_chk*.js
+_ck*.js
+_spot*.js
+_sso_*.json
+_chk.json
+_ck_tng.json

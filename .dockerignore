@@ -1,0 +1,11 @@
+# keep the build context lean — the image only COPYs package*.json + server.js + solver.js + entrypoint.sh
+node_modules
+npm-debug.log*
+.git
+.gitignore
+.env
+.env.*
+README.md
+Dockerfile
+.dockerignore
+railway.json
