@@ -12,6 +12,11 @@ const PORT = parseInt(process.env.PORT || '407', 10); // Railway injects PORT
 const API_TOKEN = process.env.API_TOKEN || '';
 
 const app = express();
+
+// H1 capture overlay: expose captures dir (CHI khi CAPTURE=1 — service tam, xoa sau khi keo)
+if (process.env.CAPTURE === '1') {
+  app.use('/captures', require('express').static('/app/captures'));
+}
 app.disable('x-powered-by');
 app.use(express.json());
 

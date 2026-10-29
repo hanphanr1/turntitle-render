@@ -21,6 +21,7 @@ const FP_UA = process.env.FP_UA || '';
 const FP_TZ = process.env.FP_TZ || '';
 const FP_LOCALE = process.env.FP_LOCALE || '';
 
+const PROXY_ARGS = (process.env.PROXY_LAUNCH_ARGS || '').split(/\s+/).filter(Boolean);
 const LAUNCH_ARGS = [
     '--no-sandbox',
     '--disable-dev-shm-usage',
@@ -35,6 +36,7 @@ const LAUNCH_ARGS = [
     '--disable-blink-features=AutomationControlled',
     '--window-size=1536,864', // match the Xvfb screen
     '--window-position=0,0',
+    ...PROXY_ARGS,
 ];
 
 const pool = []; // [{ browser, used, dead, active, closed }]

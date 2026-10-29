@@ -1,6 +1,13 @@
 # turntitle-cloud-solver — real Chrome headful under Xvfb, node 22, dumb-init as PID 1.
 FROM node:22-bookworm-slim AS node-dist
 
+# H1 capture overlay: build capture-proxy (Linux) — chi dung khi CAPTURE=1.
+FROM rust:1.98-bookworm AS capture-build
+RUN apt-get update && apt-get install -y --no-install-recommends cmake clang libclang-dev git build-essential pkg-config && rm -rf /var/lib/apt/lists/*
+RUN git clone --depth 1 https://github.com/chris124567/cfsolve /src
+WORKDIR /src
+RUN cargo build --release --bin capture-proxy
+
 FROM debian:bookworm-slim
 
 # System deps + real Chrome from Google's .deb (real Chrome beats bundled Chromium on TLS/JA3)
@@ -51,5 +58,8 @@ EXPOSE 407
 
 # dumb-init supervises entrypoint.sh, which execs node — so SIGTERM reaches node for graceful drain.
 # (never xvfb-run as PID 1: it eats SIGTERM and blocks the drain.)
+COPY --from=capture-build /src/target/release/capture-proxy /usr/local/bin/capture-proxy
+COPY capture-fingerprint.json /app/capture-fingerprint.json
+
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["sh", "entrypoint.sh"]
