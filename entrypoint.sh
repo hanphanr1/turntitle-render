@@ -14,7 +14,7 @@ done
 sleep 0.5
 [ -S /tmp/.X11-unix/X99 ] || echo "[entrypoint] warn: /tmp/.X11-unix/X99 never appeared"
 
-if [ "$CAPTURE" = "1" ]; then
+if [ "$CAPTURE_MITM" = "1" ]; then
   mkdir -p /app/captures
   /usr/local/bin/capture-proxy \
     --fingerprint /app/capture-fingerprint.json \

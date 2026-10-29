@@ -207,6 +207,36 @@ function release() {
 
 // ---- browser pool ----
 
+// H1 capture plaintext (CAPTURE=1): doc attribute plain-rN stub page thu duoc tu iframe
+async function harvestPlain(pg, tag, hooked) {
+    try {
+        const out = await pg.evaluate(`(() => {
+            const d = document.documentElement;
+            const n = +(d.getAttribute('data-plain-count') || 0);
+            const items = [];
+            for (let i = 1; i <= n; i++) items.push([d.getAttribute('data-plain-' + i), +(d.getAttribute('data-t-' + i) || -1)]);
+            return { n, items };
+        })()`);
+        const n = out ? out.n : 0;
+        if (n > 0) {
+            for (let i = 0; i < n; i++) {
+                const [txt, tt] = (out.items[i] || []);
+                if (txt) {
+                    try {
+                        fs.writeFileSync(`/app/captures/plain-${tag}-r${i + 1}.json`, txt);
+                        if (tt >= 0) fs.writeFileSync(`/app/captures/plain-${tag}-r${i + 1}.t`, String(tt));
+                    } catch (_) {}
+                }
+            }
+        }
+        console.log(`[CAPTURE] ${tag}: plains=${n} hookHit=${!!hooked}`);
+        return n;
+    } catch (e) {
+        console.log('[CAPTURE] harvest err', String(e && e.message).slice(0, 80));
+        return 0;
+    }
+}
+
 // H1 debug: mo page bat ky tu browser pool (dung kiem tra proxy routing)
 async function debugOpenPage(url) {
     const slot = await pickSlot();
@@ -403,7 +433,35 @@ async function solveTurnstileOnce(siteUrl, siteKey, timeout, t0, proxyRaw, isCan
                 return await route.continue();
             } catch (e) { try { await route.continue(); } catch (e2) {} }
         });
-        await pg.route(siteUrl, r => r.fulfill({ body: buildPage(siteKey), status: 200, contentType: 'text/html' }).catch(() => {}));
+        // H1 CAPTURE=1: hook plaintext FO trong rch HTML (postMessage ra stub page). KHONG MITM —
+        // TLS that cua Chrome, solve van nhu production. Luu rch.html goc de sua regex neu build doi.
+        let capHooked = false;
+        if (process.env.CAPTURE === '1') {
+            await pg.route('https://challenges.cloudflare.com/**', async (route) => {
+                try {
+                    const resp = await route.fetch();
+                    const ct = (resp.headers()['content-type'] || '');
+                    if (!ct.includes('text/html')) return await route.fulfill({ response: resp });
+                    let body = await resp.text();
+                    try { fs.writeFileSync('/app/captures/rch.html', body); } catch (_) {}
+                    const HOOK_RE = /=([A-Za-z0-9_$]+)\(([^();]{1,140})\)(,\s*(?:[A-Za-z0-9_$]+\[[^\]]*\]|[A-Za-z0-9_$\[\]]+)\s*=\s*\{\[[^\]]+\]:[^;]{0,200}?new URL\()/;
+                    if (HOOK_RE.test(body)) {
+                        capHooked = true;
+                        body = body.replace(HOOK_RE, (m, encFn, args, tail) => {
+                            const last = args.trim().split(',').pop().trim();
+                            return `=(window.top.postMessage({__plainFo:JSON.stringify(${last}),__t:Math.round(performance.now())},"*"),${encFn}(${args}))${tail}`;
+                        });
+                    }
+                    const headers = { ...resp.headers() };
+                    delete headers['content-encoding']; delete headers['content-length'];
+                    return await route.fulfill({ status: resp.status(), headers, body });
+                } catch (e) { try { await route.continue(); } catch (e2) {} }
+            });
+        }
+        const capListen = process.env.CAPTURE === '1'
+            ? '<scr' + 'ipt>window.addEventListener("message",function(m){try{if(m.data&&m.data.__plainFo){var d=document.documentElement,n=+(d.getAttribute("data-plain-count")||0)+1;d.setAttribute("data-plain-count",String(n));d.setAttribute("data-plain-"+n,String(m.data.__plainFo));if(m.data.__t!=null)d.setAttribute("data-t-"+n,String(m.data.__t));}}catch(e){}},false);</scr' + 'ipt>'
+            : '';
+        await pg.route(siteUrl, r => r.fulfill({ body: buildPage(siteKey) + capListen, status: 200, contentType: 'text/html' }).catch(() => {}));
         await pg.goto(siteUrl, { timeout: 15000 });
 
         let clicked = false;
@@ -429,6 +487,7 @@ async function solveTurnstileOnce(siteUrl, siteKey, timeout, t0, proxyRaw, isCan
                 if (prox.entry) prox.entry.fails = 0; // pooled proxy just proved itself
                 const src = (tok && tok.length > 50) ? 'input' : 'pm';
                 console.log(`[SOLVE-OK] slot=${slot.used} proxy=${prox.pw ? (prox.pw.server || 'pool') : 'direct'} src=${src} len=${token.length} head=${token.slice(0, 24)} t=${elapsed}`);
+                if (process.env.CAPTURE === '1') await harvestPlain(pg, 'ok', capHooked);
                 return { success: true, token, time: elapsed, by: HANDLE };
             }
             // (fall through: poll until timeout)
@@ -458,6 +517,7 @@ async function solveTurnstileOnce(siteUrl, siteKey, timeout, t0, proxyRaw, isCan
             console.log('[SOLVE-TMO]', JSON.stringify(st).slice(0, 160));
         } catch (e) { console.log('[SOLVE-TMO] probe err', String(e && e.message).slice(0, 80)); }
 
+        if (process.env.CAPTURE === '1') await harvestPlain(pg, 'tmo', capHooked);
         return { success: false, err: 'timeout', __pooled: !!(prox && prox.entry) };
     } catch (e) {
         stats.failed++;
