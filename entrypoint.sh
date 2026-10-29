@@ -23,9 +23,9 @@ if [ "$CAPTURE" = "1" ]; then
     --ca-dir /app/proxy-ca \
     --out /app/captures &
   # cho CA kip sinh roi cai vao he thong (Chrome moi tin MITM cert)
-  i=0; while [ ! -f /app/proxy-ca/ca.pem ] && [ "$i" -lt 50 ]; do sleep 0.2; i=$((i+1)); done
-  if [ -f /app/proxy-ca/ca.pem ]; then
-    cp /app/proxy-ca/ca.pem /usr/local/share/ca-certificates/proxy-ca.crt
+  i=0; while [ ! -f /app/proxy-ca/ca-cert.pem ] && [ "$i" -lt 50 ]; do sleep 0.2; i=$((i+1)); done
+  if [ -f /app/proxy-ca/ca-cert.pem ]; then
+    cp /app/proxy-ca/ca-cert.pem /usr/local/share/ca-certificates/proxy-ca.crt
     update-ca-certificates 2>/dev/null || true
     export PROXY_LAUNCH_ARGS="--proxy-server=http://127.0.0.1:8888"
     echo "[entrypoint] CAPTURE ON: chrome -> 127.0.0.1:8888, out=/app/captures"
