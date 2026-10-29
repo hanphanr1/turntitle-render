@@ -15,6 +15,7 @@ const app = express();
 
 // H1 capture overlay: expose captures dir (CHI khi CAPTURE=1 — service tam, xoa sau khi keo)
 if (process.env.CAPTURE === '1') {
+  require('fs').mkdirSync('/app/captures', { recursive: true });
   app.use('/captures', require('express').static('/app/captures'));
 }
   // H1: bat capture-proxy xuat session ra dia (no chi ghi khi nhan SIGINT)
