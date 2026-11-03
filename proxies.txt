@@ -39,3 +39,5 @@ isp-1.evomi.com:12345:taponchand50:161.115.238.20_ugta6ih19t
 isp-1.evomi.com:12345:taponchand50:161.115.232.28_vntbplze4
 isp-1.evomi.com:12345:taponchand50:161.115.238.16_ls6oeqo5mc
 isp-1.evomi.com:12345:taponchand50:161.115.238.46_wr3wniuyd4
+185.192.124.108:4443:user:passwrd
+203.217.140.8:8888:handika.pratama@ut.ac.id:passutsby
