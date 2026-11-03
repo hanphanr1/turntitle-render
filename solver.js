@@ -487,9 +487,29 @@ async function solveTurnstileOnce(siteUrl, siteKey, timeout, t0, proxyRaw, isCan
                     try { fs.writeFileSync(`/app/captures/hook-${capN}-${hook ? hook.name : 'none'}.txt`, route.request().url().slice(0, 200)); } catch (_) {}
                     if (hook) {
                         capHooked = hook.name;
-                        body = body.replace(hook.re, (m, encFn, args) => {
-                            const payload = hook.pick(args);
-                            return `=(window.top.postMessage({__plainFo:JSON.stringify(${payload}),__t:Math.round(performance.now())},"*"),${encFn}(${args}))`;
+                        // Wrap MOI top-level arg thuần reference (identifier/member — eval 2 lan vo hai)
+                        // bang postMessage: session khac nhau dat payload o arg khac nhau (run1 arg duy nhat,
+                        // run4 arg 3-4) — dump het roi loc ben duoi.
+                        const REF = /^[$A-Za-z_][$\w]*(?:\.[$\w]+|\[[^\][]*\])*$/;
+                        const splitTop = (s) => {
+                            const out = []; let depth = 0, cur = '';
+                            for (const ch of s) {
+                                if (ch === '(' || ch === '[') depth++;
+                                else if (ch === ')' || ch === ']') depth--;
+                                if (ch === ',' && depth === 0) { out.push(cur); cur = ''; continue; }
+                                cur += ch;
+                            }
+                            out.push(cur);
+                            return out.map(x => x.trim()).filter(Boolean);
+                        };
+                        const gre = new RegExp(hook.re.source, hook.re.flags.includes('g') ? hook.re.flags : hook.re.flags + 'g');
+                        body = body.replace(gre, (m, encFn, args) => {
+                            const wrapped = splitTop(args).map(a =>
+                                REF.test(a)
+                                    ? `(window.top.postMessage({__plainFo:JSON.stringify(${a}),__t:Math.round(performance.now())},"*"),${a})`
+                                    : a
+                            ).join(',');
+                            return `=${encFn}(${wrapped})`;
                         });
                     }
                     const headers = { ...resp.headers() };
