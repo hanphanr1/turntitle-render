@@ -436,6 +436,7 @@ async function solveTurnstileOnce(siteUrl, siteKey, timeout, t0, proxyRaw, isCan
         // H1 CAPTURE=1: hook plaintext FO trong rch HTML (postMessage ra stub page). KHONG MITM —
         // TLS that cua Chrome, solve van nhu production. Luu rch.html goc de sua regex neu build doi.
         let capHooked = false;
+        let capN = 0;
         if (process.env.CAPTURE === '1') {
             await pg.route('https://challenges.cloudflare.com/**', async (route) => {
                 try {
@@ -443,6 +444,8 @@ async function solveTurnstileOnce(siteUrl, siteKey, timeout, t0, proxyRaw, isCan
                     const ct = (resp.headers()['content-type'] || '');
                     if (!ct.includes('text/html')) return await route.fulfill({ response: resp });
                     let body = await resp.text();
+                    capN = (capN || 0) + 1;
+                    try { fs.writeFileSync(`/app/captures/rch-${capN}-${body.length}.html`, body); } catch (_) {}
                     try { fs.writeFileSync('/app/captures/rch.html', body); } catch (_) {}
                     // The encoder call that assembles the POST body, followed by the request
                     // descriptor holding `new URL(...)`. Build 2 spelled the descriptor with a
@@ -461,6 +464,7 @@ async function solveTurnstileOnce(siteUrl, siteKey, timeout, t0, proxyRaw, isCan
                         },
                     ];
                     const hook = HOOKS.find(candidate => candidate.re.test(body));
+                    try { fs.writeFileSync(`/app/captures/hook-${capN}-${hook ? hook.name : 'none'}.txt`, route.request().url().slice(0, 200)); } catch (_) {}
                     if (hook) {
                         capHooked = hook.name;
                         body = body.replace(hook.re, (m, encFn, args) => {
