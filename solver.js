@@ -437,10 +437,18 @@ async function solveTurnstileOnce(siteUrl, siteKey, timeout, t0, proxyRaw, isCan
         // TLS that cua Chrome, solve van nhu production. Luu rch.html goc de sua regex neu build doi.
         let capHooked = false;
         let capN = 0;
+        let capP = 0;
         if (process.env.CAPTURE === '1') {
             await pg.route('https://challenges.cloudflare.com/**', async (route) => {
                 try {
                     const resp = await route.fetch();
+                    const req0 = route.request();
+                    if (req0.method() === 'POST' && req0.url().includes('/fo/')) {
+                        // program response cua session nay — capture_answers.rs can post-url + body
+                        capP++;
+                        try { fs.writeFileSync(`/app/captures/post-${capP}-url.txt`, req0.url()); } catch (_) {}
+                        try { fs.writeFileSync(`/app/captures/post-${capP}-body.bin`, await resp.body()); } catch (_) {}
+                    }
                     const ct = (resp.headers()['content-type'] || '');
                     if (!ct.includes('text/html')) return await route.fulfill({ response: resp });
                     let body = await resp.text();
