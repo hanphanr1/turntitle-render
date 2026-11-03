@@ -444,12 +444,28 @@ async function solveTurnstileOnce(siteUrl, siteKey, timeout, t0, proxyRaw, isCan
                     if (!ct.includes('text/html')) return await route.fulfill({ response: resp });
                     let body = await resp.text();
                     try { fs.writeFileSync('/app/captures/rch.html', body); } catch (_) {}
-                    const HOOK_RE = /=([A-Za-z0-9_$]+)\(([^();]{1,140})\)(,\s*(?:[A-Za-z0-9_$]+\[[^\]]*\]|[A-Za-z0-9_$\[\]]+)\s*=\s*\{\[[^\]]+\]:[^;]{0,200}?new URL\()/;
-                    if (HOOK_RE.test(body)) {
-                        capHooked = true;
-                        body = body.replace(HOOK_RE, (m, encFn, args, tail) => {
-                            const last = args.trim().split(',').pop().trim();
-                            return `=(window.top.postMessage({__plainFo:JSON.stringify(${last}),__t:Math.round(performance.now())},"*"),${encFn}(${args}))${tail}`;
+                    // The encoder call that assembles the POST body, followed by the request
+                    // descriptor holding `new URL(...)`. Build 2 spelled the descriptor with a
+                    // computed key; build 3 (2026-11-02) uses a quoted one and passes the
+                    // payload as the first argument.
+                    const HOOKS = [
+                        {
+                            name: 'b2',
+                            re: /=([A-Za-z0-9_$]+)\(([^();]{1,140})\)(,\s*(?:[A-Za-z0-9_$]+\[[^\]]*\]|[A-Za-z0-9_$\[\]]+)\s*=\s*\{\[[^\]]+\]:[^;]{0,200}?new URL\()/,
+                            pick: (args) => args.trim().split(',').pop().trim(),
+                        },
+                        {
+                            name: 'b3',
+                            re: /=([A-Za-z0-9_$]+)\(([^()]{1,200})\)(?=,\s*[A-Za-z0-9_$]+\s*=\s*\{[^;]{0,300}?new URL\()/,
+                            pick: (args) => args.trim().split(',')[0].trim(),
+                        },
+                    ];
+                    const hook = HOOKS.find(candidate => candidate.re.test(body));
+                    if (hook) {
+                        capHooked = hook.name;
+                        body = body.replace(hook.re, (m, encFn, args) => {
+                            const payload = hook.pick(args);
+                            return `=(window.top.postMessage({__plainFo:JSON.stringify(${payload}),__t:Math.round(performance.now())},"*"),${encFn}(${args}))`;
                         });
                     }
                     const headers = { ...resp.headers() };
