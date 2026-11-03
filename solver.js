@@ -458,9 +458,21 @@ async function solveTurnstileOnce(siteUrl, siteKey, timeout, t0, proxyRaw, isCan
                             pick: (args) => args.trim().split(',').pop().trim(),
                         },
                         {
-                            name: 'b3',
-                            re: /=([A-Za-z0-9_$]+)\(([^()]{1,200})\)(?=,\s*[A-Za-z0-9_$]+\s*=\s*\{[^;]{0,300}?new URL\()/,
-                            pick: (args) => args.trim().split(',')[0].trim(),
+                            name: 'b4',
+                            // 2026-11-03 live: args co 2 tang ngoac (wj[42278^(8043^(~-60412^20918))]),
+                            // descriptor = computed element key (wO[123^_0xf]=). Payload = first top-level arg.
+                            re: /=([A-Za-z0-9_$]+)\(([^()]*(?:\([^()]*(?:\([^()]*\))?[^()]*\)[^()]*)*)\)(?=,\s*[A-Za-z0-9_$]+(?:\[[^\]]*\])?\s*=\s*\{[^;]{0,300}?new URL\()/,
+                            pick: (args) => {
+                                const s = args.trim();
+                                let depth = 0;
+                                for (let k = 0; k < s.length; k++) {
+                                    const c = s[k];
+                                    if (c === '(' || c === '[') depth++;
+                                    else if (c === ')' || c === ']') depth--;
+                                    else if (c === ',' && depth === 0) return s.slice(0, k).trim();
+                                }
+                                return s;
+                            },
                         },
                     ];
                     const hook = HOOKS.find(candidate => candidate.re.test(body));
