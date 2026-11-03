@@ -448,6 +448,7 @@ async function solveTurnstileOnce(siteUrl, siteKey, timeout, t0, proxyRaw, isCan
                         capP++;
                         try { fs.writeFileSync(`/app/captures/post-${capP}-url.txt`, req0.url()); } catch (_) {}
                         try { fs.writeFileSync(`/app/captures/post-${capP}-body.bin`, await resp.body()); } catch (_) {}
+                        try { const n = await pg.evaluate('+(document.documentElement.getAttribute("data-plain-count")||0)').catch(() => -1); fs.writeFileSync(`/app/captures/stage-P${capP}-plaincount-${n}.txt`, new Date().toISOString()); } catch (_) {}
                     }
                     const ct = (resp.headers()['content-type'] || '');
                     if (!ct.includes('text/html')) return await route.fulfill({ response: resp });
